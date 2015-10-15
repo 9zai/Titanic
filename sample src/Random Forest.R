@@ -1,5 +1,6 @@
 setwd("/Users/9zai/Desktop/competition/Titanic/")
-library(ggplot2)
+set.seed(5)
+
 library(randomForest)
 train <- read.csv("train.csv",header = TRUE, stringsAsFactors = F)
 test <- read.csv("test.csv",header = TRUE,stringsAsFactors = F)
