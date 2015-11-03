@@ -18,16 +18,45 @@ getBoat <- function(data){
   data[data$Age <15,'Boat'] <-1
   return(as.factor(data$Boat))
 }
+getMother <- function(data){
+  data$Mother <-0
+  data$Mother[which(("female"==data$Sex)&(data$Age>18)&(data$Parch>0)&(data$Title !="Miss"))] <- 1
+  return(as.factor(data$Mother))
+}
+getChild <- function(data){
+  data$Child <- 0
+  data$Child[which((data$Age<18)&(data$Parch)>1)] <-1;
+  return(as.factor(data$Child))
+}
 getFare <- function(data){
   data$Fare[data$Fare == 0] <- NA
-  data$Fare <- replaceByMedian(data$Fare,data$Pclass,levels(data$Pclass))
+  data$Fare <- replaceByMedian(data$Fare,data$Pclass,levels(as.factor(data$Pclass)))
   return(data$Fare)
 }
-cTitleAgeRelation <- function(data){
+getPos <-function(data){
+  data$TicketNum<-gsub("[A-Z ./]{1,10}","",data$Ticket,ignore.case = T)
+  data$num<-as.numeric(data$TicketNum)
+  data$num[which(is.na(data$num))] <- 0
+  PosEle <- matrix(data = NA,nrow = 1309,ncol=3)
+  PosEle[,1] <- data$num
+  PosEle[,2] <-as.numeric(data$Pclass)
+  PosEle[,3] <- data$Fare
+  Pos<-kmeans(PosEle,centers = 9,nstart = 20)
+  data$CabinPos<-Pos$cluster
+  data$CabinPos<-factor(data$CabinPos)
+  levels(data$CabinPos)<-c('UpFront','UpMiddle','UpEnd',
+                           'CenFront','CenMiddel','CenEnd',
+                           'BottomFront','BottomMiddle','BottomEnd')
+  return(data$CabinPos)
+}
+cTitleAgeRelation <- function(data){#And reppace
   options(digits=2)
   data$Title <- as.factor(getTitle(data))
   bystats(data$Age,data$Title,
           fun = function(x)c(Mean=mean(x),Median=median(x)) )
+  miss.title <- c("Dr","Master","Miss","Mr","Mrs","Ms")
+  data$Age <- replaceByMedian(data$Age,getTitle(data),miss.title)
+  return(data$Age)
 }
 replaceByMedian <- function(Missing,Filter,missCategory){
   for( level in missCategory){
@@ -39,28 +68,85 @@ replaceByMedian <- function(Missing,Filter,missCategory){
 
 #main
 raw.train <- read.csv("train.csv",header =T)
+raw.test <- read.csv("test.csv",header =T)
+raw.test$Survived <- NA
 
-raw.train$Survived <- as.factor(raw.train$Survived)
-raw.train$Pclass <- as.factor(raw.train$Pclass)
-summary(raw.train)# show a summary
+raw.full <- rbind(raw.train,raw.test)
+summary(raw.full)
 
-raw.train[raw.train$Embarked=="","Embarked"] <- "S" 
-raw.train$Embarked <- factor(raw.train$Embarked)
-#boxplot of ages by passenger traveling--help filling the missing in age
-#boxplot for numeric mosaicplot for factoric
-#boxplot(Age~Pclass,data = raw.train)
-#mosaicplot(Survived~Pclass,data = raw.train)
+raw.full[raw.full$Embarked=="","Embarked"] <- "S"
+raw.full$Embarked <- factor(raw.full$Embarked)
+raw.full$Title <- getTitle(raw.full)
+Miss <- c("Dona","Lady","Ms","Mlle","Jonkheer")
+Mrs <- c("Mme")
+Mr <- c("Capt","Col","Don","Dr","Major","Sir","the Countess","Rev")
+raw.full[which(raw.full$Title %in% Miss),"Title"] <- "Miss"
+raw.full[which(raw.full$Title %in% Mrs),"Title"] <- "Mrs"
+raw.full[which(raw.full$Title %in% Mr),"Title"] <- "Mr"
+raw.full$Age <- cTitleAgeRelation(raw.full)
 
-# replace age by title
-raw.train$Title <- getTitle(raw.train)
-cTitleAgeRelation(raw.train)
-miss.title <- c("Dr","Master","Miss","Miss","Mr","Mrs")
-raw.train$Age <- replaceByMedian(raw.train$Age,raw.train$Title,miss.title)
-# replace fare by Pclass
-raw.train$Fare <- getFare(raw.train)
+raw.full$Fare <- getFare(raw.full)
+raw.full$Mother <- getMother(raw.full)
+raw.full$Child <- getChild(raw.full)
+raw.full$Boat <- getBoat(raw.full)
+raw.full$Family <- getFamily(raw.full)
+raw.full$Pos <- getPos(raw.full)
 
-raw.train$Family <- getFamily(raw.train)
-raw.train$Boat <- getBoat(raw.train)
-raw.train$Title <- raw.train$Title
-attrName <- c("Survived","Age","Pclass","Sex","Fare","Embarked","Family","Boat","Title")
-train <- raw.train[,attrName]
+raw.full$Survived <- factor(raw.full$Survived)
+raw.full$Title <- factor(raw.full$Title)
+
+train.attrName <- c("Survived","Age","Pclass","Sex","Fare","Title","Pos",
+                    "Mother","Child","Embarked","Family","Boat")
+test.attrName <- c("Age","Pclass","Sex","Fare","Title","Pos",
+                    "Mother","Child","Embarked","Family","Boat")
+
+train <- raw.full[which(!is.na(raw.full$Survived)),train.attrName]
+test <- raw.full[which(is.na(raw.full$Survived)),test.attrName]
+
+re.train <- train[1:100,train.attrName]
+
+# raw.train$Survived <- as.factor(raw.train$Survived)
+# raw.train$Pclass <- as.factor(raw.train$Pclass)
+# summary(raw.train)# show a summary
+# 
+# raw.train[raw.train$Embarked=="","Embarked"] <- "S" 
+# raw.train$Embarked <- factor(raw.train$Embarked)
+# #boxplot of ages by passenger traveling--help filling the missing in age
+# #boxplot for numeric mosaicplot for factoric
+# #boxplot(Age~Pclass,data = raw.train)
+# #mosaicplot(Survived~Pclass,data = raw.train)
+# 
+# # replace age by title
+# raw.train$Title <- getTitle(raw.train)
+# cTitleAgeRelation(raw.train)
+# miss.title <- c("Dr","Master","Miss","Miss","Mr","Mrs")
+# raw.train$Age <- replaceByMedian(raw.train$Age,raw.train$Title,miss.title)
+# # replace fare by Pclass
+# raw.train$Fare <- getFare(raw.train)
+# 
+# raw.train$Family <- getFamily(raw.train)
+# raw.train$Boat <- getBoat(raw.train)
+# raw.train$Title <- raw.train$Title
+# attrName <- c("Survived","Age","Pclass","Sex","Fare","Embarked","Family","Boat")
+# #Title is hard to hindle and not really meaningful
+# train <- raw.train[101:891,attrName]
+# re.train <- raw.train[1:100,attrName]
+# #------------- clean the test data -------------------------
+# 
+# 
+# raw.test$Pclass <- as.factor(raw.test$Pclass)
+# raw.test$Title <- getTitle(raw.test)
+# raw.test$Family <- getFamily(raw.test)
+# raw.test$Fare <- getFare(raw.test)
+# cTitleAgeRelation(raw.test)
+# raw.test[raw.test$Title=="Ms","Title"]<- "Mr"# two special Title Dona - Don/ Ms - Mr
+# raw.test[raw.test$Title=="Dona","Title"]<- "Don"
+# test.missTitle <- c("Master","Miss","Mr","Mrs")
+# raw.test$Age <- replaceByMedian(raw.test$Age,raw.test$Title,test.missTitle)
+# 
+# raw.test$Boat <- getBoat(raw.test)
+# raw.test$Title <- raw.test$Title
+# test.attrName <- c("Age","Pclass","Sex","Fare","Embarked","Family","Boat")
+# test <- raw.test[,test.attrName]
+
+detach("package:Hmisc", unload=TRUE)

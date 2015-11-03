@@ -38,7 +38,9 @@ getGlm <-function(tr,te){
   glm <- glm(Survived~.,data = tr,family = binomial)
   model.glm <<- glm
   result <- predict(glm,newdata = te)
-  as.numeric(result)
+  result <- as.numeric(result)
+  result[which(result<0)] <- 0
+  result <- (result)/(1+result)
 }
 getSvm <-function(tr,te){
   svm <- svm(Survived~.,data = tr,probability = T)
@@ -118,6 +120,7 @@ myClassifier <- function(do.cv =T,do.test =F){
   if(do.test){
     prob.glm <<- getGlm(train,test)
     prob.svm <<- getSvm(train,test)
+#    result.neuro <<- getNeu(train,test)
     prob.ada <<- getAda(train,test)
     prob.randomF <<- getRandomForest(train,test)
   }
