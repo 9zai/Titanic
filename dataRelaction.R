@@ -1,0 +1,1 @@
+setwd("/Users/9zai/Desktop/competition/Titanic/data")

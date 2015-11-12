@@ -14,19 +14,10 @@ getFamily <- function(data){
 }
 getBoat <- function(data){
   data$Boat <- 0
-  data[data$Sex == 'female','Boat'] <- 1
+  data[data$Sex == 'female' ,'Boat'] <- 1
+  data[data$Age >65,'Boat'] <-0
   data[data$Age <15,'Boat'] <-1
   return(as.factor(data$Boat))
-}
-getMother <- function(data){
-  data$Mother <-0
-  data$Mother[which(("female"==data$Sex)&(data$Age>18)&(data$Parch>0)&(data$Title !="Miss"))] <- 1
-  return(as.factor(data$Mother))
-}
-getChild <- function(data){
-  data$Child <- 0
-  data$Child[which((data$Age<18)&(data$Parch)>1)] <-1;
-  return(as.factor(data$Child))
 }
 getFare <- function(data){
   data$Fare[data$Fare == 0] <- NA
@@ -86,8 +77,6 @@ raw.full[which(raw.full$Title %in% Mr),"Title"] <- "Mr"
 raw.full$Age <- cTitleAgeRelation(raw.full)
 
 raw.full$Fare <- getFare(raw.full)
-raw.full$Mother <- getMother(raw.full)
-raw.full$Child <- getChild(raw.full)
 raw.full$Boat <- getBoat(raw.full)
 raw.full$Family <- getFamily(raw.full)
 raw.full$Pos <- getPos(raw.full)
@@ -96,57 +85,17 @@ raw.full$Survived <- factor(raw.full$Survived)
 raw.full$Title <- factor(raw.full$Title)
 
 train.attrName <- c("Survived","Age","Pclass","Sex","Fare","Title","Pos",
-                    "Mother","Child","Embarked","Family","Boat")
+                    "Embarked","Family","Boat")
 test.attrName <- c("Age","Pclass","Sex","Fare","Title","Pos",
-                    "Mother","Child","Embarked","Family","Boat")
+                    "Embarked","Family","Boat")
 
 train <- raw.full[which(!is.na(raw.full$Survived)),train.attrName]
 test <- raw.full[which(is.na(raw.full$Survived)),test.attrName]
+test$PassengerId <- row.names(test)
 
-re.train <- train[1:100,train.attrName]
-
-# raw.train$Survived <- as.factor(raw.train$Survived)
-# raw.train$Pclass <- as.factor(raw.train$Pclass)
-# summary(raw.train)# show a summary
-# 
-# raw.train[raw.train$Embarked=="","Embarked"] <- "S" 
-# raw.train$Embarked <- factor(raw.train$Embarked)
-# #boxplot of ages by passenger traveling--help filling the missing in age
-# #boxplot for numeric mosaicplot for factoric
-# #boxplot(Age~Pclass,data = raw.train)
-# #mosaicplot(Survived~Pclass,data = raw.train)
-# 
-# # replace age by title
-# raw.train$Title <- getTitle(raw.train)
-# cTitleAgeRelation(raw.train)
-# miss.title <- c("Dr","Master","Miss","Miss","Mr","Mrs")
-# raw.train$Age <- replaceByMedian(raw.train$Age,raw.train$Title,miss.title)
-# # replace fare by Pclass
-# raw.train$Fare <- getFare(raw.train)
-# 
-# raw.train$Family <- getFamily(raw.train)
-# raw.train$Boat <- getBoat(raw.train)
-# raw.train$Title <- raw.train$Title
-# attrName <- c("Survived","Age","Pclass","Sex","Fare","Embarked","Family","Boat")
-# #Title is hard to hindle and not really meaningful
-# train <- raw.train[101:891,attrName]
-# re.train <- raw.train[1:100,attrName]
-# #------------- clean the test data -------------------------
-# 
-# 
-# raw.test$Pclass <- as.factor(raw.test$Pclass)
-# raw.test$Title <- getTitle(raw.test)
-# raw.test$Family <- getFamily(raw.test)
-# raw.test$Fare <- getFare(raw.test)
-# cTitleAgeRelation(raw.test)
-# raw.test[raw.test$Title=="Ms","Title"]<- "Mr"# two special Title Dona - Don/ Ms - Mr
-# raw.test[raw.test$Title=="Dona","Title"]<- "Don"
-# test.missTitle <- c("Master","Miss","Mr","Mrs")
-# raw.test$Age <- replaceByMedian(raw.test$Age,raw.test$Title,test.missTitle)
-# 
-# raw.test$Boat <- getBoat(raw.test)
-# raw.test$Title <- raw.test$Title
-# test.attrName <- c("Age","Pclass","Sex","Fare","Embarked","Family","Boat")
-# test <- raw.test[,test.attrName]
-
+rm(raw.test)
+rm(raw.train)
+rm(Miss)
+rm(Mr)
+rm(Mrs)
 detach("package:Hmisc", unload=TRUE)
